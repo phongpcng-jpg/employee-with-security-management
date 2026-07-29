@@ -3,6 +3,8 @@ package com.example.employee_with_security_management.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import com.example.employee_with_security_management.security.exceptions.AccessDenied;
 import com.example.employee_with_security_management.security.exceptions.JwtEntryPoint;
+import com.example.employee_with_security_management.security.principal.CustomUserDetailsService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
     private final JwtEntryPoint entryPoint;
     private final AccessDenied accessDenied;
+    private final CustomUserDetailsService userDetailsService;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -36,6 +40,13 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -43,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .authenticationProvider(authenticationProvider())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(entryPoint)
                         .accessDeniedHandler(accessDenied)
